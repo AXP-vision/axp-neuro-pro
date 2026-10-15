@@ -1,9 +1,9 @@
-// app.js - AXP Neuro-Optic Engine v30.0 (OEPF 臨床濾鏡光譜校準 × 尺寸線寬生理耦合 × 1-3階舒適圈漸進擴張版)
+// app.js - AXP Neuro-Optic Engine v31.0 (Pursuit 追視速度解放 × Saccade 跳視預告準星 × OEPF 光譜校準 × 尺寸線寬生理耦合版)
 // 核心臨床工程突破：
-// 1. 尺寸與線條粗細生理耦合 (Size-Thickness Coupling)：大尺寸配厚實線條 (Stage 1-3 喚醒周邊舒適圈)，小尺寸配精緻細線 (Stage 8-10 中心窩精準鎖定)，徹底杜絕「圖小線粗」悲劇
-// 2. OEPF 臨床紅藍濾鏡專屬光譜引擎：內建左眼鈷藍防紫波長補償 (cyanComp) 與右眼深紅消光控制，100% 恆定高對比零鬼影
-// 3. 第 1~3 階舒適圈喚醒阻尼：於初階自動柔化 Pursuit 追視半徑與 Saccade 跳視跨度，溫和喚醒長期僵直之眼外肌群，逐步擴大視覺舒適圈
-// 4. 完整支援三大黑科技視標 (陀螺儀準星鎖 / 10層立體蟲洞隧道 / 費馬黃金螺旋光流陣) 與 60s/90s 換關前 5 秒倒數預告
+// 1. 徹底解放 Stage 1-3 眼外肌暖身運動：移除過度壓抑之幅度阻尼，讓 KeyU (大圓周与8字追視 Pursuit) 與 KeyO (定點跳視 Saccade) 從第 1 階第一秒就清晰有感
+// 2. 獨家「Saccade 跳視落點預告準星 (Ghost Reticle)」：於跳視模式下自動在下一落點預先顯示微光瞄準圈，訓練「餘光定位 -> 快速跳視 -> 中心窩合像」完整神經閉環
+// 3. 尺寸與線條粗細正向生理耦合：大圖配厚線 (初階喚醒舒適圈) -> 小圖配細銳線 (高階中心窩精雕)，徹底杜絕圖小線粗悲劇
+// 4. 針對 OEPF 臨床級紅藍濾鏡 (左鈷藍/右深紅) 內建防紫波長補償，並鎖死 BI 開散回彈上限於 6.5Δ BI 內
 
 import { AIM_MATRIX, PROTOCOL_NAMES } from './matrix.js';
 import { createTarget } from './shapes.js';
@@ -109,13 +109,22 @@ document.getElementById('arena').appendChild(stageCountdownBadge);
 
 // === 核心狀態變數 ===
 let isRunning = false, animationId;
-let currentSize = 360, currentSpeed = 12, currentStereo = 0.02, currentThick = 8.0;
+let currentSize = 360, currentSpeed = 14, currentStereo = 0.02, currentThick = 8.0;
 let currentVertPrism = 0; 
 let currentStageDurationMs = 60000; 
 let currentDistractors = 0; 
 let isRotating = true, isFilled = true;
 let activeProtocol = null, protocolStage = 0, protocolTime = 0, totalTimerSec = 0, lastTime = 0, phase = 0;
 let currentSaccadeX = 0, currentSaccadeY = 0, saccadeTimer = 0, currentRoamX = 0, currentRoamY = 0;
+
+// Saccade 跳視「下一個目標落點預告座標」與「8方位暖身序列索引」
+let nextSaccadeX = 180, nextSaccadeY = 0, saccadeStepIndex = 0;
+const SACCADE_WARMUP_POINTS = [
+    { x: -200, y: 0 }, { x: 200, y: 0 },
+    { x: 0, y: 135 },  { x: 0, y: -135 },
+    { x: -175, y: 115 }, { x: 175, y: -115 },
+    { x: 175, y: 115 },  { x: -175, y: -115 }
+];
 
 let dichopticSwapState = false; 
 
@@ -223,6 +232,29 @@ for (let r = 0; r < 4; r++) {
 antagonistRippleGroup.visible = false;
 scene.add(antagonistRippleGroup);
 
+// 🎯 獨家黑科技：Saccade 定點跳視「下一個落點預告準星 (Ghost Reticle)」
+// 分別設定於 Layer 1 (左眼) 與 Layer 2 (右眼)，讓雙眼餘光同時預先鎖定下一個跳躍座標！
+function createSaccadeGhostReticle(layerNum) {
+    const gGroup = new THREE.Group();
+    const gMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, depthWrite: false });
+    const ring = new THREE.Mesh(new THREE.RingGeometry(42, 46, 32), gMat);
+    ring.layers.set(layerNum);
+    gGroup.add(ring);
+    for (let i = 0; i < 4; i++) {
+        const rad = (i * 90 * Math.PI) / 180;
+        const tick = new THREE.Mesh(new THREE.BoxGeometry(4, 14, 1), gMat);
+        tick.position.set(Math.sin(rad) * 52, Math.cos(rad) * 52, 0);
+        tick.rotation.z = -rad;
+        tick.layers.set(layerNum);
+        gGroup.add(tick);
+    }
+    gGroup.visible = false;
+    return gGroup;
+}
+const saccadeGhostLeft = createSaccadeGhostReticle(1);
+const saccadeGhostRight = createSaccadeGhostReticle(2);
+scene.add(saccadeGhostLeft, saccadeGhostRight);
+
 // 紅藍分層深空星點
 const starCanvas = document.createElement('canvas');
 starCanvas.width = 32; starCanvas.height = 32;
@@ -313,10 +345,7 @@ function getScreenSizeCompensationFactor() {
     return baseMbp16Cm / physicalWidthCm;
 }
 
-// =========================================================================
 // 🔬 OEPF 臨床紅藍濾鏡光譜校準引擎
-// 針對 OEPF 左眼鈷藍鏡片提供防紫短波補償 (cyanComp)，徹底消除商業螢幕藍光發紫與紅光刺穿鬼影
-// =========================================================================
 function updateOpticsFromUI() {
     const rVal = redSlider ? parseInt(redSlider.value) : 85;
     const gVal = greenSlider ? parseInt(greenSlider.value) : 85;
@@ -341,12 +370,10 @@ function updateOpticsFromUI() {
         primaryLeftColor.setRGB(0.0, 1.0, 0.0);
         postMaterial.uniforms.intensityLeft.value = (gVal / 100.0) * opacityLeft;
     } else if (gMode === 'rb') {
-        // 一般商業紅青鏡
         if(document.getElementById('l-val')) document.getElementById('l-val').innerText = bVal + '%';
         primaryLeftColor.setRGB(0.0, 0.55, 1.0);
         postMaterial.uniforms.intensityLeft.value = (bVal / 100.0) * opacityLeft;
     } else {
-        // 🔬 OEPF 臨床級紅藍濾鏡：左眼鈷藍加入精準短波補償，不發紫且不穿透紅片
         if(document.getElementById('l-val')) document.getElementById('l-val').innerText = bVal + '%';
         primaryLeftColor.setRGB(0.0, cyanComp, 1.0);
         postMaterial.uniforms.intensityLeft.value = (bVal / 100.0) * opacityLeft;
@@ -380,16 +407,10 @@ function clearTargets() {
     distractorData = [];
 }
 
-// =========================================================================
-// 🔬 核心突破：尺寸與線條粗細生理耦合器 (Size-Thickness Physiological Coupling)
-// 確保「圖形越大 (初階舒適圈) -> 線條越厚實好抓；圖形越小 (高階精細圈) -> 線條越細緻銳利」！
-// 徹底杜絕「稜鏡越大、尺寸越小、結果線條越粗糊成一團」的視覺擁擠悲劇！
-// =========================================================================
+// 🔬 尺寸與線條粗細正向生理耦合器 (大圖配厚線 -> 小圖配細銳線，徹底杜絕圖小線粗悲劇)
 function getPhysiologicalCoupledThickness(sizeVal, rawThickVal) {
-    // 以 360px 為基準 (比例 1.0)；當尺寸放大至 450px 時線寬自動加厚至 1.15 倍；
-    // 當高階尺寸縮小至 220px 時，幾何內部線寬額外精細化縮減至 0.68 倍，維持完美的留白對比度！
-    const sizeRatio = Math.max(0.55, Math.min(1.25, Math.pow(sizeVal / 360.0, 0.85)));
-    return Math.max(3.2, Math.min(10.0, rawThickVal * sizeRatio));
+    const sizeRatio = Math.max(0.52, Math.min(1.22, Math.pow(sizeVal / 360.0, 0.85)));
+    return Math.max(3.0, Math.min(10.0, rawThickVal * sizeRatio));
 }
 
 function buildTargets() {
@@ -401,7 +422,6 @@ function buildTargets() {
     const leftRole = dichopticSwapState ? 'right' : 'left';
     const rightRole = dichopticSwapState ? 'left' : 'right';
 
-    // 自動計算與當前尺寸完美匹配之生理線寬
     const effectiveThick = getPhysiologicalCoupledThickness(currentSize, currentThick);
 
     targetLeft = createTarget(shapeVal, 0xffffff, isFilled, txtVal, effectiveThick, leftRole);
@@ -428,7 +448,7 @@ function buildTargets() {
             
             distractorData.push({
                 phaseOffset: (i * Math.PI * 2) / currentDistractors,
-                speedMultiplier: 0.42 + (i % 3) * 0.20,
+                speedMultiplier: 0.48 + (i % 3) * 0.22,
                 orbitRadiusX: 255 + (i * 30),
                 orbitRadiusY: 185 + (i * 25),
                 zOffset: (i % 2 === 0 ? 1 : -1) * 60,
@@ -442,7 +462,6 @@ function buildTargets() {
     updateOpticsFromUI(); 
 }
 
-// 純淨等比縮放：徹底移除舊版會導致小視標線條變粗的 correctionScale 反向補償
 function updateScaleAndThickness(dynamicSize = currentSize) {
     const screenComp = getScreenSizeCompensationFactor();
     const scaleFactor = (dynamicSize / 200) * screenComp;
@@ -470,10 +489,9 @@ function updatePositions(phaseVal, currentAnim = '') {
     const maxPrismLoad = parseFloat(prismSlider ? prismSlider.value : 0);
     let targetPrismDemand = maxPrismLoad;
 
-    // 生理不對稱聚散軌道：BO 可推至高階，但 BI 開散回彈嚴格限制於 6.5 Δ BI 以內
     if (isRunning) {
-        if (currentAnim.includes('antagonist_relax') || currentAnim.includes('center_lock_peripheral') || currentAnim.includes('vert_')) {
-            targetPrismDemand = maxPrismLoad * (0.85 + 0.15 * Math.sin(phaseVal));
+        if (currentAnim.includes('antagonist_relax') || currentAnim.includes('center_lock_peripheral') || currentAnim.includes('vert_') || currentAnim.includes('saccade_warmup')) {
+            targetPrismDemand = maxPrismLoad * (0.88 + 0.12 * Math.sin(phaseVal));
         } else if (currentAnim.includes('flipper')) {
             targetPrismDemand = flipperState ? maxPrismLoad : -Math.min(5.5, Math.abs(maxPrismLoad) * 0.35);
         } else {
@@ -501,10 +519,8 @@ function updatePositions(phaseVal, currentAnim = '') {
     const totalSeparationPx = requiredSeparationCm / pixelToCm;
     let baseDispX = totalSeparationPx / 2;
 
-    // 🌿 第 1~3 階舒適圈喚醒阻尼 (Warm-up Comfort Zone Damping)：
-    // 當處於前 3 階 (protocolStage <= 2) 時，自動將追視與跳視的幅度收斂至 68% 溫和範圍，幫助久未運動的眼外肌無痛甦醒！
-    const comfortZoneFactor = (aiToggle && aiToggle.checked && protocolStage <= 2) ? 0.68 : 1.0;
-
+    // 解放 Pursuit 平滑追視之角速度與跨度 (乘上 2.2 倍軌跡相位，讓圓周與 8 字追視在 Stage 1-3 就極度流暢有感！)
+    const pursuitPhase = phaseVal * 2.2;
     let pxLeftX = 0, pxRightX = 0, pxLeftY = 0, pxRightY = 0;
 
     if (currentAnim.includes('center_lock_peripheral') || currentAnim.includes('antagonist_relax')) {
@@ -514,22 +530,21 @@ function updatePositions(phaseVal, currentAnim = '') {
         pxRightY = 0;
     }
     else if (currentAxis === 'lissajous') {
-        const ampX = 225 * comfortZoneFactor;
-        const ampY = 145 * comfortZoneFactor;
-        pxLeftX = baseDispX + Math.sin(phaseVal) * ampX;
-        pxRightX = -baseDispX + Math.sin(phaseVal) * ampX;
-        pxLeftY = Math.sin(phaseVal * 2) * ampY;
-        pxRightY = pxLeftY;
+        const orbitX = Math.sin(pursuitPhase) * 235;
+        const orbitY = Math.sin(pursuitPhase * 2) * 155;
+        pxLeftX = baseDispX + orbitX;
+        pxRightX = -baseDispX + orbitX;
+        pxLeftY = orbitY;
+        pxRightY = orbitY;
     }
     else if (currentAxis === 'vertical') {
-        const ampV = 165 * comfortZoneFactor;
+        const orbitY = Math.sin(pursuitPhase) * 175;
         pxLeftX = baseDispX; pxRightX = -baseDispX;
-        pxLeftY = Math.sin(phaseVal) * ampV; pxRightY = pxLeftY;
+        pxLeftY = orbitY; pxRightY = orbitY;
     } 
     else if (currentAxis === 'circular') {
-        const radC = 180 * comfortZoneFactor;
-        const orbitX = Math.cos(phaseVal) * radC; 
-        const orbitY = Math.sin(phaseVal) * radC;
+        const orbitX = Math.cos(pursuitPhase) * 195; 
+        const orbitY = Math.sin(pursuitPhase) * 195;
         pxLeftX = baseDispX + orbitX; pxRightX = -baseDispX + orbitX; pxLeftY = orbitY; pxRightY = orbitY;
     } 
     else {
@@ -560,7 +575,6 @@ function updatePositions(phaseVal, currentAnim = '') {
         finalRightY -= halfVertPx * vertFactor;
     }
 
-    // 全域物理安全邊界：BO 上限 36Δ，BI 開散上限嚴格鎖死於 7.0Δ BI
     const maxBOPx = (36 * viewDistM) / pixelToCm;
     const maxBIPx = (7.0 * viewDistM) / pixelToCm; 
 
@@ -568,8 +582,6 @@ function updatePositions(phaseVal, currentAnim = '') {
     if (dx > maxBOPx) { let scale = maxBOPx / dx; finalLeftX *= scale; finalRightX *= scale; } 
     else if (dx < -maxBIPx) { let scale = -maxBIPx / dx; finalLeftX *= scale; finalRightX *= scale; }
 
-    // 僅對多層 3D 結構 (如 depth_tunnel 10層蟲洞隧道 / sphere5 / circle5) 施加層間立體視差梯度；
-    // 單一 unitGroup 封裝之陀螺儀與十字靶則保持 0 位移，100% 杜絕零件脫節與獨立紫色！
     if(targetLeft && targetRight) {
         const layerCount = targetLeft.children.length;
         if (layerCount > 1) {
@@ -599,9 +611,17 @@ function updatePositions(phaseVal, currentAnim = '') {
         }
     }
 
+    // 更新 Saccade 跳視「下一個落點預告準星」位置
+    if (saccadeGhostLeft.visible && saccadeGhostRight.visible) {
+        saccadeGhostLeft.position.set(baseDispX + nextSaccadeX, nextSaccadeY, -10);
+        saccadeGhostRight.position.set(-baseDispX + nextSaccadeX, nextSaccadeY, -10);
+        saccadeGhostLeft.rotation.z += 0.02;
+        saccadeGhostRight.rotation.z += 0.02;
+    }
+
     for (let i = 0; i < currentDistractors; i++) {
         const dData = distractorData[i];
-        const dPhase = (phase * dData.speedMultiplier * 1.4) + dData.phaseOffset;
+        const dPhase = (phase * dData.speedMultiplier * 1.6) + dData.phaseOffset;
         const roamingX = Math.cos(dPhase) * dData.orbitRadiusX;
         const roamingY = Math.sin(dPhase) * dData.orbitRadiusY;
         const depthDisp = (currentStereo * dData.zOffset * 0.1); 
@@ -663,11 +683,10 @@ function handleTaskResult(result, rt = 0) {
             if(!isAIRescueActive && statusText) statusText.style.color = consecutiveHits >= 3 ? '#D4AF37' : '#34d399';
         } else {
             let failType = ""; let reason = result === 'wrong' ? "方向誤差" : "反應逾時";
-            let triggerRescue = false;
-            if (Math.abs(dy) > 4) { failType = "垂直融像失準"; statusLabel = "垂直失準(VERT_FAIL)"; triggerRescue = true; } 
+            if (Math.abs(dy) > 4) { failType = "垂直融像失準"; statusLabel = "垂直失準(VERT_FAIL)"; } 
             else {
-                if (dx < 0) { failType = "內聚負荷臨界"; statusLabel = "聚合不足(BO_FAIL)"; triggerRescue = true; } 
-                else { failType = "外展負荷臨界"; statusLabel = "開散不足(BI_FAIL)"; triggerRescue = true; }
+                if (dx < 0) { failType = "內聚負荷臨界"; statusLabel = "聚合不足(BO_FAIL)"; } 
+                else { failType = "外展負荷臨界"; statusLabel = "開散不足(BI_FAIL)"; }
             }
             logMsg = `🔴 ${failType} (${reason})`; 
             consecutiveMisses++; consecutiveHits = 0;
@@ -704,7 +723,6 @@ function handleTaskResult(result, rt = 0) {
 
 let protocolTimeBeforeRescue = 0;
 
-// 減壓緩衝機制：當大腦負荷過高時，自動退回舒適圈 (降低稜鏡並適度放大尺寸，同時重新匹配適當線寬)
 function activateAIRescue(reasonMsg) {
     if (loginOverlay.style.display !== 'none' || !isRunning || isAIRescueActive) return;
     isAIRescueActive = true; aiRescueStartTime = performance.now();
@@ -874,7 +892,6 @@ if (viewDistInput) viewDistInput.addEventListener('input', () => {
     updatePositions(phase, '');
 });
 
-// 當手動調整尺寸時，同步觸發 buildTargets() 讓線條粗細隨尺寸自動變細或變厚
 if(sizeSlider) sizeSlider.addEventListener('input', (e) => { currentSize = parseFloat(e.target.value); protocolTime = 0; updateUIValues(); buildTargets(); disableAI(); });
 if(speedSlider) speedSlider.addEventListener('input', (e) => { currentSpeed = parseFloat(e.target.value); protocolTime = 0; updateUIValues(); disableAI(); });
 if(thickSlider) thickSlider.addEventListener('input', (e) => { currentThick = parseFloat(e.target.value); protocolTime = 0; updateUIValues(); buildTargets(); disableAI(); });
@@ -899,6 +916,8 @@ function disableAI() {
     protocolTime = 0;
     dichopticSwapState = false;
     antagonistRippleGroup.visible = false;
+    saccadeGhostLeft.visible = false;
+    saccadeGhostRight.visible = false;
     stageCountdownBadge.style.display = 'none';
     buildTargets();
     
@@ -948,7 +967,7 @@ function loadMatrixStage(protocol, stage) {
     
     const stageMaxStr = AIM_MATRIX[protocol] ? AIM_MATRIX[protocol].length : 10;
     const durSec = config.duration || 60;
-    const zoneTag = stage <= 2 ? " [初階舒適圈]" : (stage === 6 ? " [全向放鬆站]" : (stage >= 7 ? " [精細擴展圈]" : " [進階適應圈]"));
+    const zoneTag = stage <= 2 ? " [初階舒適圈暖身]" : (stage === 6 ? " [全向放鬆站]" : (stage >= 7 ? " [精細擴展圈]" : " [進階適應圈]"));
     if(dynamicModeTag) {
         dynamicModeTag.innerText = `[ ${PROTOCOL_NAMES[protocol].split(' ')[0]} ] Stage ${stage + 1}/${stageMaxStr}${zoneTag} : ${config.name}`;
         dynamicModeTag.style.color = config.anim.includes('antagonist_relax') ? '#34d399' : '#D4AF37'; 
@@ -957,6 +976,8 @@ function loadMatrixStage(protocol, stage) {
         stageIndicatorLabel.innerText = `${protocol.replace('Key','')} 模組｜Stage ${stage + 1} / ${stageMaxStr} (${durSec}s)`;
     }
     currentSaccadeX = 0; currentSaccadeY = 0; currentRoamX = 0; currentRoamY = 0;
+    nextSaccadeX = SACCADE_WARMUP_POINTS[0].x; nextSaccadeY = SACCADE_WARMUP_POINTS[0].y;
+    saccadeStepIndex = 0;
 }
 
 function toggleTestMode() {
@@ -1022,7 +1043,7 @@ function animate(time) {
         totalTimerSec++; 
         if(timerDisplay) timerDisplay.innerText = Math.floor(totalTimerSec / 60).toString().padStart(2, '0') + ':' + (totalTimerSec % 60).toString().padStart(2, '0');
     }
-    const speedFactor = 40000 / Math.max(1, currentSpeed); phase += dt / speedFactor; 
+    const speedFactor = 32000 / Math.max(1, currentSpeed); phase += dt / speedFactor; 
 
     // 10 秒迷走神經呼吸指示燈律動
     const breathCycle = (time % 10000) / 1000;
@@ -1062,7 +1083,7 @@ function animate(time) {
             stageCountdownBadge.style.display = 'none';
         }
 
-        // ⚡ 去抑制機制一：左右眼幾何結構瞬換 (swap_flash)，不改紅藍亮度，直接互換圓圈與十字角色
+        // ⚡ 去抑制機制一：左右眼幾何結構瞬換 (swap_flash)
         if (currentAnim.includes('swap_flash')) {
             const swapPeriod = currentAnim.includes('swap_flash_fast') ? 5000 : 7000;
             const cyclePos = protocolTime % swapPeriod;
@@ -1099,7 +1120,7 @@ function animate(time) {
             const gentleBreathSize = currentSize * (0.88 + 0.22 * breathWave);
             updateScaleAndThickness(gentleBreathSize);
             siloPrompt.style.display = 'block';
-            siloPrompt.innerText = `🌿 第 7 階・全向拮抗肌放鬆站 (剩餘 ${secLeft}s)：請看中央黃金螺旋與水波舒展並深長吐氣`;
+            siloPrompt.innerText = `🌿 第 7 階・全向拮抗肌放鬆站 (剩餘 ${secLeft}s)：請看中央雷達與同心水波舒展並深長吐氣`;
             siloPrompt.style.borderColor = "#34d399";
         } else {
             antagonistRippleGroup.visible = false;
@@ -1120,10 +1141,18 @@ function animate(time) {
                     siloPrompt.style.borderColor = "#38bdf8";
                 }
                 updateScaleAndThickness(currentSize * (1 - sineVal * 0.22));
+            } else if (currentAnim.includes('peripheral_pursuit')) {
+                siloPrompt.style.display = 'block';
+                siloPrompt.innerText = "🔄 平滑追視訓練 (Pursuit)：請保持下巴與頭頸部不動，只讓雙眼平滑跟隨雷達軌跡移動！";
+                siloPrompt.style.borderColor = "#38bdf8";
             } else if (currentAnim.includes('center_lock_peripheral')) {
                 siloPrompt.style.display = 'block';
-                siloPrompt.innerText = "👁️ 周邊視野定錨：請盯緊中央靶心保持合像，用眼角餘光辨識外圍閃爍點方向！";
-                siloPrompt.style.borderColor = "#38bdf8";
+                siloPrompt.innerText = "👁️ 周邊視野定錨：請盯緊中央雷達靶心保持合像，用眼角餘光辨識外圍閃爍點方向！";
+                siloPrompt.style.borderColor = "#D4AF37";
+            } else if (currentAnim.includes('saccade_warmup') || currentAnim.includes('saccade_vergence')) {
+                siloPrompt.style.display = 'block';
+                siloPrompt.innerText = "⚡ 定點跳視訓練 (Saccade)：請用餘光預瞄微光預告圈，跳動瞬間雙眼快速移動並鎖定合像！";
+                siloPrompt.style.borderColor = "#D4AF37";
             } else if (currentAnim.includes('vert_step_alt')) {
                 siloPrompt.style.display = 'block';
                 const cSec = (protocolTime / 1000) % 14.0;
@@ -1168,39 +1197,49 @@ function animate(time) {
     const isRoamActive = (currentAnim.includes('roam') || (!aiToggle.checked && currentAxis === 'roam')) && !currentAnim.includes('center_lock_peripheral') && !currentAnim.includes('antagonist_relax');
     const isSaccadeActive = (currentAnim.includes('saccade') || (!aiToggle.checked && currentAxis === 'saccade')) && !currentAnim.includes('center_lock_peripheral') && !currentAnim.includes('antagonist_relax');
 
-    // 漫遊與跳視同樣支援「前 3 階舒適圈溫和喚醒阻尼」
-    const stageWarmupScale = (aiToggle && aiToggle.checked && protocolStage <= 2) ? 0.65 : 1.0;
-
     if (isRoamActive) {
-        currentRoamX = Math.sin(phase * 0.72) * 260 * stageWarmupScale;
-        currentRoamY = Math.cos(phase * 0.52) * 175 * stageWarmupScale;
+        currentRoamX = Math.sin(phase * 1.35) * 245;
+        currentRoamY = Math.cos(phase * 0.95) * 165;
     } else {
         currentRoamX = 0; currentRoamY = 0;
     }
 
+    // ⚡ Saccade 定點跳視引擎：配備「下一落點微光預告準星」
     if (isSaccadeActive) {
+        saccadeGhostLeft.visible = true;
+        saccadeGhostRight.visible = true;
         saccadeTimer += dt; 
-        const sacInterval = (protocolStage <= 4) ? 2000 : 1650; // 初中階給予更充裕的跳視停靠時間
+        const isWarmupSaccade = currentAnim.includes('saccade_warmup') || (protocolStage <= 2);
+        const sacInterval = isWarmupSaccade ? 2100 : 1550; 
+
         if (saccadeTimer > sacInterval) { 
             saccadeTimer = 0; 
-            currentSaccadeX = (Math.random() > 0.5 ? 1 : -1) * (100 + Math.random() * 145) * stageWarmupScale; 
-            currentSaccadeY = (Math.random() > 0.5 ? 1 : -1) * (70 + Math.random() * 105) * stageWarmupScale; 
+            // 將視標正式跳往預告準星之位置
+            currentSaccadeX = nextSaccadeX;
+            currentSaccadeY = nextSaccadeY;
+
+            // 計算下一個預告落點座標
+            if (isWarmupSaccade) {
+                saccadeStepIndex = (saccadeStepIndex + 1) % SACCADE_WARMUP_POINTS.length;
+                nextSaccadeX = SACCADE_WARMUP_POINTS[saccadeStepIndex].x;
+                nextSaccadeY = SACCADE_WARMUP_POINTS[saccadeStepIndex].y;
+            } else {
+                nextSaccadeX = (Math.random() > 0.5 ? 1 : -1) * (120 + Math.random() * 140); 
+                nextSaccadeY = (Math.random() > 0.5 ? 1 : -1) * (80 + Math.random() * 95); 
+            }
         }
     } else {
         currentSaccadeX = 0; currentSaccadeY = 0;
+        saccadeGhostLeft.visible = false;
+        saccadeGhostRight.visible = false;
     }
 
     if(targetLeft && targetRight) {
         const curShape = shapeSelect ? shapeSelect.value : '';
         if (isRotating) {
             if (curShape === 'depth_tunnel') {
-                // 10層立體蟲洞隧道：奇偶層反向微速緩慢自轉，創造深邃太空引力井立體視覺
                 targetLeft.children.forEach((layer, idx) => { layer.rotation.z = phase * (idx % 2 === 0 ? 0.22 : -0.22); });
                 targetRight.children.forEach((layer, idx) => { layer.rotation.z = phase * (idx % 2 === 0 ? 0.22 : -0.22); });
-            } else if (curShape === 'golden_spiral') {
-                // 費馬黃金螺旋光流陣：極慢速順時針旋轉，溫和擴張周邊視網膜
-                targetLeft.rotation.z = phase * 0.25;
-                targetRight.rotation.z = phase * 0.25;
             } else if (curShape.includes('crystal') || curShape.includes('sphere') || curShape === 'nested_dodeca' || curShape === 'torusKnot') {
                 targetLeft.children.forEach((layer, index) => { 
                     layer.rotation.x += (index % 2 === 0 ? 0.008 : -0.008); 
@@ -1213,11 +1252,11 @@ function animate(time) {
             }
         }
         
-        // 陀螺儀 (gyro_cross)、十字靶 (dichoptic_cross) 與文字 (text) 保持水平與垂直軸絕對端正不旋轉，確保垂直與水平刻度的精準對位！
-        if (!isRotating || curShape === 'text' || curShape === 'dichoptic_cross' || curShape === 'gyro_cross' || curShape === 'depth_tunnel') {
+        // 戰術雷達網 (golden_spiral/radar_hud)、陀螺儀 (gyro_cross)、十字靶與文字保持正交軸線絕對端正不自轉，讓米字與十字刻度精準咬合！
+        if (!isRotating || curShape === 'text' || curShape === 'dichoptic_cross' || curShape === 'gyro_cross' || curShape === 'golden_spiral' || curShape === 'radar_hud' || curShape === 'depth_tunnel') {
             targetLeft.rotation.z = 0;
             targetRight.rotation.z = 0;
-        } else if (curShape !== 'golden_spiral') {
+        } else {
             targetLeft.rotation.z = phase * 0.35; 
             targetRight.rotation.z = phase * 0.35; 
         }
@@ -1264,6 +1303,8 @@ function executeReset() {
     isTestModeActive = true;
     dichopticSwapState = false;
     antagonistRippleGroup.visible = false;
+    saccadeGhostLeft.visible = false;
+    saccadeGhostRight.visible = false;
     stageCountdownBadge.style.display = 'none';
     cueGroupLeft.visible = false; cueGroupRight.visible = false;
     if (btnTestMode) {
@@ -1272,7 +1313,7 @@ function executeReset() {
     }
     consecutiveHits = 0; consecutiveMisses = 0;
     
-    currentSize = 360; currentSpeed = 12; currentStereo = 0.02; currentThick = 8.0;
+    currentSize = 360; currentSpeed = 14; currentStereo = 0.02; currentThick = 8.0;
     currentVertPrism = 0;
     currentDistractors = 0; 
     currentSaccadeX = 0; currentSaccadeY = 0; currentRoamX = 0; currentRoamY = 0; phase = 0;
