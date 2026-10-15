@@ -1,1 +1,451 @@
+/* style.css - AXP Neuro-Optic Engine v30.0 (OEPF 臨床消光黑金儀器級介面) */
+/* 專為凡特錫視覺實驗室打造：消除周邊眩光干擾，強化中心窩與周邊視網膜定錨 */
 
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+body, html {
+    width: 100%;
+    height: 100%;
+    background-color: #000000;
+    color: #f8fafc;
+    font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+    overflow: hidden;
+}
+
+#fv-fusion-app {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    background-color: #000000;
+}
+
+/* =========================================================
+   左側：WebGL 臨床黑科技視覺訓練艙 (100% 純黑無雜光暗室)
+   ========================================================= */
+#arena {
+    flex: 1;
+    position: relative;
+    height: 100%;
+    background-color: #000000;
+    overflow: hidden;
+}
+
+#webgl-container {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* 左上角：HUD 臨床即時光學數據儀表 */
+#hud {
+    position: absolute;
+    top: 20px;
+    left: 22px;
+    background: rgba(15, 23, 42, 0.86);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(212, 175, 55, 0.38);
+    border-left: 4px solid #D4AF37;
+    border-radius: 12px;
+    padding: 14px 20px;
+    min-width: 340px;
+    z-index: 50;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
+    pointer-events: none;
+    font-family: 'Montserrat', 'Noto Sans TC', monospace;
+}
+
+.hud-top-row, .hud-mid-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 18px;
+    font-size: 13px;
+    color: #94a3b8;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+}
+
+.hud-top-row strong, .hud-mid-row strong {
+    font-size: 14.5px;
+    font-weight: 800;
+    color: #f8fafc;
+}
+
+#dynamic-mode-tag {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(148, 163, 184, 0.25);
+    font-size: 13px;
+    font-weight: 800;
+    color: #D4AF37;
+    letter-spacing: 0.5px;
+}
+
+/* 左下角：多重迷走神經 10 秒呼吸律動導引條 */
+#vagal-breath-bar {
+    position: absolute;
+    bottom: 20px;
+    left: 22px;
+    background: rgba(15, 23, 42, 0.82);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(56, 189, 248, 0.28);
+    border-radius: 30px;
+    padding: 8px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 50;
+    pointer-events: none;
+}
+
+#breath-indicator {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background-color: #38bdf8;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+    transition: transform 0.15s linear, background-color 0.4s ease;
+}
+
+#breath-text {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #cbd5e1;
+    letter-spacing: 0.5px;
+}
+
+/* =========================================================
+   右側：瑞士醫療儀器級控制面板 (低眩光深海石板藍)
+   ========================================================= */
+.control-panel {
+    width: 350px;
+    height: 100vh;
+    background: linear-gradient(180deg, #0f172a 0%, #162032 100%);
+    border-left: 1px solid #1e293b;
+    display: flex;
+    flex-direction: column;
+    padding: 18px 16px;
+    overflow-y: auto;
+    z-index: 60;
+    box-shadow: -8px 0 30px rgba(0, 0, 0, 0.5);
+}
+
+.control-panel::-webkit-scrollbar {
+    width: 5px;
+}
+.control-panel::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 4px;
+}
+
+.panel-header {
+    text-align: center;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #1e293b;
+}
+
+.panel-header h2 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: #D4AF37;
+    margin-bottom: 3px;
+}
+
+.panel-header p {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    letter-spacing: 1.5px;
+}
+
+.control-section {
+    background: rgba(30, 41, 59, 0.55);
+    border: 1px solid rgba(51, 65, 85, 0.7);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 11px;
+}
+
+.control-section h3 {
+    font-size: 12.5px;
+    font-weight: 800;
+    color: #e2e8f0;
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+}
+
+.section-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.section-title-row h3 {
+    margin-bottom: 0;
+}
+
+.ai-switch-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #D4AF37;
+    cursor: pointer;
+}
+
+/* 按鈕群組樣式 */
+.btn-main {
+    width: 100%;
+    padding: 12px;
+    font-size: 14.5px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    color: #ffffff;
+    background: linear-gradient(135deg, #2980b9 0%, #1a365d 100%);
+    border: 1px solid #38bdf8;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 14px rgba(41, 128, 185, 0.3);
+    margin-bottom: 8px;
+}
+
+.btn-main:hover {
+    filter: brightness(1.12);
+}
+
+.btn-main.active {
+    background: linear-gradient(135deg, #d97706 0%, #92400e 100%);
+    border-color: #facc15;
+    box-shadow: 0 4px 14px rgba(217, 119, 6, 0.35);
+}
+
+.sub-action-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.15fr;
+    gap: 6px;
+}
+
+.btn-sub, .btn-report {
+    padding: 8px 6px;
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.2s;
+    text-align: center;
+}
+
+.btn-sub {
+    background: #1e293b;
+    color: #cbd5e1;
+    border: 1px solid #334155;
+}
+.btn-sub:hover {
+    background: #334155;
+    color: #ffffff;
+}
+
+.btn-report {
+    background: rgba(212, 175, 55, 0.16);
+    color: #D4AF37;
+    border: 1px solid rgba(212, 175, 55, 0.5);
+}
+.btn-report:hover {
+    background: #D4AF37;
+    color: #0f172a;
+}
+
+/* 五大專武模組按鈕網格 */
+.protocol-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 9px;
+}
+
+.proto-btn {
+    background: #0f172a;
+    color: #cbd5e1;
+    border: 1px solid #334155;
+    border-radius: 7px;
+    padding: 8px 9px;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.proto-btn strong {
+    background: #1e293b;
+    color: #D4AF37;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Montserrat', monospace;
+    font-size: 11.5px;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.proto-btn:hover {
+    border-color: #38bdf8;
+    color: #ffffff;
+}
+
+.proto-btn.active-proto {
+    background: rgba(41, 128, 185, 0.25);
+    border-color: #D4AF37;
+    color: #ffffff;
+    box-shadow: inset 0 0 10px rgba(212, 175, 55, 0.18);
+}
+
+.proto-btn.active-proto strong {
+    background: #D4AF37;
+    color: #0f172a;
+}
+
+.test-mode-btn.test-on {
+    background: rgba(16, 185, 129, 0.16);
+    border-color: #10b981;
+    color: #34d399;
+}
+.test-mode-btn.test-on strong {
+    background: #10b981;
+    color: #064e3b;
+}
+
+.stage-nav-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #0f172a;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #1e293b;
+}
+
+.btn-stage-step {
+    background: #1e293b;
+    color: #cbd5e1;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.btn-stage-step:hover {
+    background: #334155;
+    color: #ffffff;
+}
+
+#stage-indicator-label {
+    font-size: 11.5px;
+    font-weight: 800;
+    color: #D4AF37;
+}
+
+/* 表單與滑桿控制項 */
+.input-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: #cbd5e1;
+}
+
+.input-row:last-child {
+    margin-bottom: 0;
+}
+
+.input-row select, .input-row input[type="number"], .input-row input[type="text"] {
+    background: #0f172a;
+    color: #f8fafc;
+    border: 1px solid #334155;
+    border-radius: 5px;
+    padding: 5px 8px;
+    font-size: 12px;
+    font-weight: 700;
+    width: 62%;
+    outline: none;
+}
+
+.input-row select:focus, .input-row input:focus {
+    border-color: #38bdf8;
+}
+
+.slider-group {
+    margin-bottom: 9px;
+}
+.slider-group:last-child {
+    margin-bottom: 0;
+}
+
+.slider-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: #94a3b8;
+    margin-bottom: 4px;
+}
+
+.slider-header strong {
+    color: #38bdf8;
+    font-family: 'Montserrat', monospace;
+    font-weight: 700;
+}
+
+input[type="range"] {
+    width: 100%;
+    height: 5px;
+    background: #0f172a;
+    border-radius: 4px;
+    outline: none;
+    -webkit-appearance: none;
+    border: 1px solid #334155;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #D4AF37;
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 6px rgba(0,0,0,0.5);
+}
+
+.checkbox-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(51, 65, 85, 0.5);
+    font-size: 12px;
+    color: #cbd5e1;
+}
+
+.checkbox-row label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
