@@ -1,8 +1,8 @@
-// shapes.js - AXP Neuro-Optic Engine v30.0 (三大神經光學黑科技視標 × 黃金粗細比例 × 零紫色殘影版)
-// 核心黑科技武裝：
-// 1. gyro_cross (航太三軸陀螺儀準星鎖)：12刻度共視羅盤 + 雙眼互補測距環翼與十字游標尺，支援結構瞬換破抑制
-// 2. depth_tunnel (10層立體深度蟲洞隧道)：非線性對數間距之圓環與八角艙交錯結構，創造極致 SILO 三維空間縱深
-// 3. golden_spiral (費馬黃金螺旋視動光流陣)：依黃金角度 137.5 度排列之 88 顆雙眼分視光點陣，擴張周邊視野並卸載眼肌張力
+// shapes.js - AXP Neuro-Optic Engine v31.0 (戰術雷達廣角網 × 航太三軸陀螺儀 × 10層立體蟲洞隧道版)
+// 核心臨床黑科技武裝：
+// 1. radar_hud / golden_spiral (戰術雷達廣角網)：360度共視裝甲外環 + 左眼(三層測距環与X型對角鎖定翼) + 右眼(正交十字刻度軸与四象限扇形掃描弧)，完美支援 Pursuit 追視與周邊視野擴張
+// 2. gyro_cross (航太三軸陀螺儀準星鎖)：12刻度共視羅盤 + 雙眼互補測距環翼與十字游標尺，支援結構瞬換破抑制与垂直微調
+// 3. depth_tunnel (10層立體深度蟲洞隧道)：非線性對數間距之圓環與八角艙交錯結構，創造極致 SILO 三維空間縱深
 // 4. 所有單層雙眼分視靶皆嚴格封裝於單一 unitGroup 內，100% 杜絕立體視差拆歪零件造成的獨立紫色殘影
 
 import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
@@ -54,7 +54,6 @@ export function createTarget(shapeType, colorHex, isFilled, textStr, thickness, 
         side: THREE.DoubleSide
     });
 
-    // 100% 純淨無陰影平面材質：專供 OEPF 紅藍分視靶使用，徹底消除邊緣半透明高光引起的鬼影
     const pureFlatMaterial = new THREE.MeshBasicMaterial({ 
         color: 0xffffff,
         side: THREE.DoubleSide
@@ -62,19 +61,18 @@ export function createTarget(shapeType, colorHex, isFilled, textStr, thickness, 
 
     // =========================================================================
     // 🧭 黑科技一：航太三軸陀螺儀準星鎖 (gyro_cross)
-    // 專攻 KeyY 去抑制與 KeyO 垂直眼位微調，支援「圓環平衡翼 <-> 十字游標尺」瞬態角色互換
+    // 專攻 KeyY 去抑制與 KeyO 跳視/垂直微調，支援「圓環平衡翼 <-> 十字游標尺」瞬態角色互換
     // =========================================================================
     if (shapeType === 'gyro_cross') {
         const unitGroup = new THREE.Group();
         const barW = Math.max(5.5, thickness * 0.88);
         const ringW = Math.max(5.0, thickness * 0.82);
 
-        // 1. 雙眼共視之最外層航太羅盤鎖定環 (半徑 136) + 12 道精密方位刻度
         const outerCompass = new THREE.Mesh(new THREE.RingGeometry(136 - ringW * 0.55, 136 + ringW * 0.55, 64), pureFlatMaterial);
         unitGroup.add(outerCompass);
 
         for (let a = 0; a < 12; a++) {
-            if (a % 3 === 0) continue; // 避開上下左右主軸，留給內部互補刻度
+            if (a % 3 === 0) continue;
             const rad = (a * 30 * Math.PI) / 180;
             const tick = new THREE.Mesh(new THREE.BoxGeometry(barW * 0.55, 12, 2), pureFlatMaterial);
             tick.position.set(Math.sin(rad) * 126, Math.cos(rad) * 126, 0);
@@ -83,7 +81,6 @@ export function createTarget(shapeType, colorHex, isFilled, textStr, thickness, 
         }
 
         if (eyeSide === 'left') {
-            // 【陀螺儀外環與水平平衡翼通道】：雙層同心測距環 + 左右水平穩定翼 + 四角斜向準星
             const midGyroRing = new THREE.Mesh(new THREE.RingGeometry(90 - ringW * 0.85, 90 + ringW * 0.85, 64), pureFlatMaterial);
             const innerGyroRing = new THREE.Mesh(new THREE.RingGeometry(42 - ringW * 0.65, 42 + ringW * 0.65, 48), pureFlatMaterial);
             
@@ -94,11 +91,9 @@ export function createTarget(shapeType, colorHex, isFilled, textStr, thickness, 
 
             unitGroup.add(midGyroRing, innerGyroRing, leftWing, rightWing);
         } else if (eyeSide === 'right') {
-            // 【陀螺儀中心十字與垂直高度尺通道】：中央精準十字靶 + 上下垂直高度槽 + 實心核心點
             const hAxis = new THREE.Mesh(new THREE.BoxGeometry(164, barW * 0.9, 2), pureFlatMaterial);
             const vAxis = new THREE.Mesh(new THREE.BoxGeometry(barW * 0.9, 224, 2), pureFlatMaterial);
             
-            // 上下水平對位橫槓 (當雙眼合像時，剛好與另一眼的 90 半徑測距環完美切齊)
             const topBar = new THREE.Mesh(new THREE.BoxGeometry(44, barW * 0.85, 2), pureFlatMaterial);
             const botBar = new THREE.Mesh(new THREE.BoxGeometry(44, barW * 0.85, 2), pureFlatMaterial);
             topBar.position.set(0, 90, 0);
@@ -113,26 +108,23 @@ export function createTarget(shapeType, colorHex, isFilled, textStr, thickness, 
     }
     // =========================================================================
     // 🌀 黑科技二：10 層非線性對數立體深度蟲洞隧道 (depth_tunnel)
-    // 專攻 KeyI 之 SILO 立體景深融像：奇數層為八角航太框，偶數層為精密圓環，產生強烈三維縱深感
-    // (注意：此視標直接在 rootGroup 下生成 8 層獨立子節點，讓 app.js 自動施加層間立體視差梯度)
+    // 專攻 KeyI 之 SILO 立體景深融像：奇數層為八角航太框，偶數層為精密圓環
     // =========================================================================
     else if (shapeType === 'depth_tunnel') {
         const tunnelLayers = 8;
         const baseTube = Math.max(2.6, thickness * 0.55);
 
         for (let i = 0; i < tunnelLayers; i++) {
-            // 非線性對數半徑分佈：由內層 (半徑 22) 向外層 (半徑 142) 漸進擴張
             const t = i / (tunnelLayers - 1);
             const radius = 22 + Math.pow(t, 1.15) * 120;
             const ringThick = baseTube * (0.65 + 0.55 * t);
-            const segs = (i % 2 === 0) ? 64 : 8; // 圓環與八角框交錯，強化視網膜視差鎖定
+            const segs = (i % 2 === 0) ? 64 : 8;
             
             const layerGroup = new THREE.Group();
             const ringMesh = new THREE.Mesh(new THREE.RingGeometry(radius - ringThick, radius + ringThick, segs), pureFlatMaterial);
             if (segs === 8) ringMesh.rotation.z = Math.PI / 8;
             layerGroup.add(ringMesh);
 
-            // 在最深處的第 0 層中心放入立體對位晶核，引導中心窩鎖定隧道盡頭
             if (i === 0) {
                 const centerDot = new THREE.Mesh(new THREE.CircleGeometry(8.5, 24), pureFlatMaterial);
                 layerGroup.add(centerDot);
@@ -142,49 +134,71 @@ export function createTarget(shapeType, colorHex, isFilled, textStr, thickness, 
         }
     }
     // =========================================================================
-    // 🌌 黑科技三：費馬黃金螺旋視動光流陣 (golden_spiral)
-    // 專攻 KeyU 周邊視野擴張與第 7 階 90 秒全向眼外肌放鬆：依 137.508 度黃金角排列
+    // 🎯 黑科技三：戰術雷達廣角網 (radar_hud，向下相容 golden_spiral 選單代號)
+    // 專攻 KeyU 周邊視野擴張、大範圍 Pursuit 追視與第 7 階 90 秒全向放鬆！
+    // 雙眼合像時：左眼的「三層測距環 + X型對角翼」與右眼的「正交十字刻度軸 + 四象限扇形掃描弧」完美咬合成 8 向戰術雷達！
     // =========================================================================
-    else if (shapeType === 'golden_spiral') {
+    else if (shapeType === 'golden_spiral' || shapeType === 'radar_hud') {
         const unitGroup = new THREE.Group();
-        const barW = Math.max(5.0, thickness * 0.8);
+        const barW = Math.max(4.8, thickness * 0.78);
+        const ringW = Math.max(4.5, thickness * 0.72);
 
-        // 中央穩定融合錨點 (左眼圓環 + 右眼十字，確保觀看螺旋光流時中央仍維持精準合像)
-        const centerAnchorRing = new THREE.Mesh(new THREE.RingGeometry(20 - barW * 0.5, 20 + barW * 0.5, 32), pureFlatMaterial);
-        unitGroup.add(centerAnchorRing);
+        // 1. 雙眼共視之最外層 360 度廣角雷達邊框 (半徑 138) + 8 個方位裝甲耳
+        const outerRadarRim = new THREE.Mesh(new THREE.RingGeometry(138 - ringW * 0.6, 138 + ringW * 0.6, 64), pureFlatMaterial);
+        unitGroup.add(outerRadarRim);
 
-        if (eyeSide === 'left') {
-            const vTick = new THREE.Mesh(new THREE.BoxGeometry(barW * 0.7, 30, 2), pureFlatMaterial);
-            unitGroup.add(vTick);
-        } else if (eyeSide === 'right') {
-            const hTick = new THREE.Mesh(new THREE.BoxGeometry(30, barW * 0.7, 2), pureFlatMaterial);
-            unitGroup.add(hTick);
+        for (let k = 0; k < 8; k++) {
+            const ang = (k * 45 * Math.PI) / 180;
+            const lug = new THREE.Mesh(new THREE.BoxGeometry(barW * 0.75, 11, 2), pureFlatMaterial);
+            lug.position.set(Math.sin(ang) * 131, Math.cos(ang) * 131, 0);
+            lug.rotation.z = -ang;
+            unitGroup.add(lug);
         }
 
-        // 費馬黃金螺旋陣列 (84 顆幾何光點，依黃金角 137.508 度向四周 360 度均勻發散)
-        const totalNodes = 84;
-        const goldenAngle = 137.507764 * (Math.PI / 180);
+        if (eyeSide === 'left') {
+            // 【左眼雷達通道】：三層等距同心測距環 (半徑 100 / 64 / 30) + 45度與135度 X 型對角鎖定線
+            const ring100 = new THREE.Mesh(new THREE.RingGeometry(100 - ringW * 0.75, 100 + ringW * 0.75, 64), pureFlatMaterial);
+            const ring64 = new THREE.Mesh(new THREE.RingGeometry(64 - ringW * 0.68, 64 + ringW * 0.68, 64), pureFlatMaterial);
+            const ring30 = new THREE.Mesh(new THREE.RingGeometry(30 - ringW * 0.60, 30 + ringW * 0.60, 48), pureFlatMaterial);
 
-        for (let n = 6; n < totalNodes; n++) {
-            // 將螺旋光點奇偶交錯分配給左眼與右眼，加上外圍共視點，形成立體雙眼螺旋場
-            const isLeftNode = (n % 2 === 0);
-            const isCommonNode = (n % 5 === 0);
-            if (!isCommonNode) {
-                if (eyeSide === 'left' && !isLeftNode) continue;
-                if (eyeSide === 'right' && isLeftNode) continue;
+            const diag1 = new THREE.Mesh(new THREE.BoxGeometry(barW * 0.7, 240, 2), pureFlatMaterial);
+            const diag2 = new THREE.Mesh(new THREE.BoxGeometry(barW * 0.7, 240, 2), pureFlatMaterial);
+            diag1.rotation.z = Math.PI / 4;
+            diag2.rotation.z = -Math.PI / 4;
+
+            unitGroup.add(ring100, ring64, ring30, diag1, diag2);
+        } else if (eyeSide === 'right') {
+            // 【右眼雷達通道】：0度與90度正交十字主軸 + 四象限扇形雷達掃描弧 (半徑 82 與 118) + 中心鎖定靶心
+            const hMain = new THREE.Mesh(new THREE.BoxGeometry(264, barW * 0.85, 2), pureFlatMaterial);
+            const vMain = new THREE.Mesh(new THREE.BoxGeometry(barW * 0.85, 264, 2), pureFlatMaterial);
+            unitGroup.add(hMain, vMain);
+
+            // 主軸上的精密測距短刻度線 (位於半徑 47 與 82 處)
+            const tickPositions = [-82, -47, 47, 82];
+            tickPositions.forEach(pos => {
+                const hTick = new THREE.Mesh(new THREE.BoxGeometry(barW * 0.7, 18, 2), pureFlatMaterial);
+                hTick.position.set(pos, 0, 0);
+                const vTick = new THREE.Mesh(new THREE.BoxGeometry(18, barW * 0.7, 2), pureFlatMaterial);
+                vTick.position.set(0, pos, 0);
+                unitGroup.add(hTick, vTick);
+            });
+
+            // 四象限扇形雷達掃描弧 (卡在左眼 64 與 100 測距環的正中間半徑 82，以及外圍 118)
+            for (let q = 0; q < 4; q++) {
+                const startAngle = (q * 90 + 18) * (Math.PI / 180);
+                const arcLen = 54 * (Math.PI / 180);
+                const sectorArc = new THREE.Mesh(new THREE.RingGeometry(82 - ringW * 0.75, 82 + ringW * 0.75, 24, 1, startAngle, arcLen), pureFlatMaterial);
+                unitGroup.add(sectorArc);
+
+                if (q % 2 === 0) {
+                    const outerArc = new THREE.Mesh(new THREE.RingGeometry(118 - ringW * 0.7, 118 + ringW * 0.7, 28, 1, startAngle - 0.1, arcLen + 0.2), pureFlatMaterial);
+                    unitGroup.add(outerArc);
+                }
             }
 
-            const r = 14.8 * Math.sqrt(n); // 最大半徑推展至約 135
-            const theta = n * goldenAngle;
-            const nodeSize = Math.max(3.2, (thickness * 0.48) * (0.55 + (n / totalNodes) * 0.65));
-            
-            const nodeGeo = (n % 3 === 0) 
-                ? new THREE.RingGeometry(nodeSize * 0.5, nodeSize * 1.15, 6)
-                : new THREE.CircleGeometry(nodeSize, 16);
-            const nodeMesh = new THREE.Mesh(nodeGeo, pureFlatMaterial);
-            nodeMesh.position.set(r * Math.cos(theta), r * Math.sin(theta), 0);
-            nodeMesh.rotation.z = theta;
-            unitGroup.add(nodeMesh);
+            const radarCore = new THREE.Mesh(new THREE.CircleGeometry(Math.max(8.5, barW * 1.15), 32), pureFlatMaterial);
+            radarCore.position.set(0, 0, 1);
+            unitGroup.add(radarCore);
         }
         rootGroup.add(unitGroup);
     }
