@@ -1,9 +1,9 @@
-// app.js - AXP Neuro-Optic Engine v31.0 (Pursuit 追視速度解放 × Saccade 跳視預告準星 × OEPF 光譜校準 × 尺寸線寬生理耦合版)
+// app.js - AXP Vision 動態視覺優化系統 (Clinical Pro Edition - Internal Build V1.0)
 // 核心臨床工程突破：
-// 1. 徹底解放 Stage 1-3 眼外肌暖身運動：移除過度壓抑之幅度阻尼，讓 KeyU (大圓周与8字追視 Pursuit) 與 KeyO (定點跳視 Saccade) 從第 1 階第一秒就清晰有感
-// 2. 獨家「Saccade 跳視落點預告準星 (Ghost Reticle)」：於跳視模式下自動在下一落點預先顯示微光瞄準圈，訓練「餘光定位 -> 快速跳視 -> 中心窩合像」完整神經閉環
-// 3. 尺寸與線條粗細正向生理耦合：大圖配厚線 (初階喚醒舒適圈) -> 小圖配細銳線 (高階中心窩精雕)，徹底杜絕圖小線粗悲劇
-// 4. 針對 OEPF 臨床級紅藍濾鏡 (左鈷藍/右深紅) 內建防紫波長補償，並鎖死 BI 開散回彈上限於 6.5Δ BI 內
+// 1. 獨立資料庫分流：所有臨床訓練紀錄 100% 獨立上傳至 Supabase 之 pro_training_sessions 資料表，與公開下放版徹底物理隔離
+// 2. 徹底解放 Stage 1-3 眼外肌暖身運動：讓 KeyU (大圓周與8字追視 Pursuit) 與 KeyO (定點跳視 Saccade) 從第 1 階第一秒就清晰有感
+// 3. 獨家「Saccade 跳視落點預告準星 (Ghost Reticle)」：於跳視模式下自動在下一落點預先顯示微光瞄準圈，訓練「餘光定位 -> 快速跳視 -> 中心窩合像」完整神經閉環
+// 4. 尺寸與線條粗細正向生理耦合：大圖配厚線 (初階喚醒舒適圈) -> 小圖配細銳線 (高階中心窩精雕)，徹底杜絕圖小線粗悲劇
 
 import { AIM_MATRIX, PROTOCOL_NAMES } from './matrix.js';
 import { createTarget } from './shapes.js';
@@ -21,7 +21,7 @@ loginOverlay.style.cssText = "position:fixed; top:0; left:0; width:100vw; height
 loginOverlay.innerHTML = `
     <div style="background:#ffffff; padding:44px 40px; border-radius:20px; text-align:center; box-shadow: 0 20px 50px rgba(26, 54, 93, 0.08); border: 1px solid #e2e8f0; border-top: 5px solid #2980b9; max-width: 440px; width: 90%;">
         <div style="display:inline-block; background:#ebf3f9; color:#2980b9; font-size:12px; font-weight:800; letter-spacing:1.5px; padding:5px 14px; border-radius:20px; margin-bottom:14px;">FANTASTIC VISION LAB</div>
-        <h1 style="color:#1a365d; font-size:26px; font-weight:900; letter-spacing:1px; margin:0 0 8px 0;">AXP 神經視覺空間協同系統</h1>
+        <h1 style="color:#1a365d; font-size:26px; font-weight:900; letter-spacing:1px; margin:0 0 8px 0;">AXP Vision 動態視覺優化系統</h1>
         <p style="color:#64748b; margin:0 0 26px 0; font-size:14.5px; font-weight:500; line-height:1.65;">請保持雙肩自然放鬆與平穩呼吸<br>準備好後即可啟動您的專屬視覺練習</p>
         <label style="display:block; margin-bottom:10px; font-size:14px; font-weight:800; color:#1a365d; text-align:center;">請輸入您的專屬訓練代號，或者姓名</label>
         <input type="text" id="patient-code-input" placeholder="例：FV-8888 / 凡特錫" style="background-color:#f8fafc; padding:14px 16px; width:100%; text-align:center; border-radius:10px; border:1.5px solid #cbd5e1; margin-bottom:22px; font-size:16px; font-weight:700; color:#1a365d; outline:none; transition:0.2s; box-sizing:border-box;">
@@ -233,7 +233,6 @@ antagonistRippleGroup.visible = false;
 scene.add(antagonistRippleGroup);
 
 // 🎯 獨家黑科技：Saccade 定點跳視「下一個落點預告準星 (Ghost Reticle)」
-// 分別設定於 Layer 1 (左眼) 與 Layer 2 (右眼)，讓雙眼餘光同時預先鎖定下一個跳躍座標！
 function createSaccadeGhostReticle(layerNum) {
     const gGroup = new THREE.Group();
     const gMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, depthWrite: false });
@@ -519,7 +518,6 @@ function updatePositions(phaseVal, currentAnim = '') {
     const totalSeparationPx = requiredSeparationCm / pixelToCm;
     let baseDispX = totalSeparationPx / 2;
 
-    // 解放 Pursuit 平滑追視之角速度與跨度 (乘上 2.2 倍軌跡相位，讓圓周與 8 字追視在 Stage 1-3 就極度流暢有感！)
     const pursuitPhase = phaseVal * 2.2;
     let pxLeftX = 0, pxRightX = 0, pxLeftY = 0, pxRightY = 0;
 
@@ -554,7 +552,6 @@ function updatePositions(phaseVal, currentAnim = '') {
     let finalLeftX = pxLeftX + currentRoamX + currentSaccadeX; let finalLeftY = pxLeftY + currentRoamY + currentSaccadeY;
     let finalRightX = pxRightX + currentRoamX + currentSaccadeX; let finalRightY = pxRightY + currentRoamY + currentSaccadeY;
 
-    // 垂直稜鏡雙向互調引擎 (左右眼上下交替)
     const targetVertPrism = currentVertPrism > 0 ? currentVertPrism : (currentAnim.includes('vert_') ? 0.8 : 0);
     if (targetVertPrism > 0 && isRunning) {
         const totalVertPx = (targetVertPrism * viewDistM) / pixelToCm;
@@ -611,7 +608,6 @@ function updatePositions(phaseVal, currentAnim = '') {
         }
     }
 
-    // 更新 Saccade 跳視「下一個落點預告準星」位置
     if (saccadeGhostLeft.visible && saccadeGhostRight.visible) {
         saccadeGhostLeft.position.set(baseDispX + nextSaccadeX, nextSaccadeY, -10);
         saccadeGhostRight.position.set(-baseDispX + nextSaccadeX, nextSaccadeY, -10);
@@ -769,7 +765,7 @@ function showClinicalReport(logs, totalTime, protocolName) {
     reportOverlay.innerHTML = `
         <div style="background:#ffffff; width: 660px; max-width:94vw; max-height: 86vh; border-radius:16px; box-shadow: 0 25px 50px rgba(0,0,0,0.4); display:flex; flex-direction:column; overflow:hidden; border-top: 5px solid #2980b9;">
             <div style="background:#1A365D; color:white; padding: 20px; text-align:center;">
-                <h2 style="margin:0; font-size:21px; font-weight:900; letter-spacing:1px;">AXP 神經視覺空間協同評估報告</h2>
+                <h2 style="margin:0; font-size:21px; font-weight:900; letter-spacing:1px;">AXP Vision 動態視覺空間協同評估報告</h2>
                 <p style="margin:5px 0 0 0; color:#D4AF37; font-size:13.5px; font-weight:700;">專屬訓練代號: ${currentPatientCode} ｜ 綜合積分: ${sessionScore}</p>
             </div>
             <div style="padding: 20px; overflow-y:auto; flex-grow:1; color:#334155;">
@@ -801,6 +797,7 @@ function showClinicalReport(logs, totalTime, protocolName) {
     });
 }
 
+// 🔬 已將資料上傳目標獨立鎖定為 pro_training_sessions 資料表！
 async function uploadToSupabase() {
     const finalTime = totalTimerSec; 
     const finalProtocol = activeProtocol ? PROTOCOL_NAMES[activeProtocol] : 'MANUAL_MODE';
@@ -824,7 +821,7 @@ async function uploadToSupabase() {
     
     try {
         if (sessionLogs.length > 0) {
-            await supabase.from('training_sessions').insert([{ 
+            await supabase.from('pro_training_sessions').insert([{ 
                 duration_sec: finalTime, 
                 protocol_name: finalProtocol, 
                 raw_data: payloadData,
@@ -905,7 +902,7 @@ if(fillCheckbox) fillCheckbox.addEventListener('change', (e) => { isFilled = e.t
 
 function disableAI() {
     if (aiToggle && aiToggle.checked) { aiToggle.checked = false; }
-    if(dynamicModeTag) { dynamicModeTag.innerText = "AXP NEURO-OPTIC PRO｜手動自由調控模式"; dynamicModeTag.style.color = '#f8fafc'; }
+    if(dynamicModeTag) { dynamicModeTag.innerText = "AXP VISION 動態視覺優化系統｜手動自由調控模式"; dynamicModeTag.style.color = '#f8fafc'; }
     if(stageIndicatorLabel) stageIndicatorLabel.innerText = "手動自由模式";
     document.querySelectorAll('.proto-btn[data-proto]').forEach(b => b.classList.remove('active-proto'));
     
@@ -1045,7 +1042,6 @@ function animate(time) {
     }
     const speedFactor = 32000 / Math.max(1, currentSpeed); phase += dt / speedFactor; 
 
-    // 10 秒迷走神經呼吸指示燈律動
     const breathCycle = (time % 10000) / 1000;
     const isInhale = breathCycle < 4.0;
     const breathWave = isInhale ? (breathCycle / 4.0) : (1.0 - (breathCycle - 4.0) / 6.0);
@@ -1074,7 +1070,6 @@ function animate(time) {
             stageIndicatorLabel.innerText = `${activeProtocol.replace('Key','')} 模組｜Stage ${protocolStage + 1}/${stageMaxStr} (剩餘 ${secLeft}s)`;
         }
 
-        // ⏳ 換關前最後 5 秒倒數計時膠囊提示
         if (secLeft <= 5 && secLeft > 0) {
             const nextStageIdx = (protocolStage + 1) % stageMaxStr;
             stageCountdownBadge.style.display = 'block';
@@ -1083,7 +1078,6 @@ function animate(time) {
             stageCountdownBadge.style.display = 'none';
         }
 
-        // ⚡ 去抑制機制一：左右眼幾何結構瞬換 (swap_flash)
         if (currentAnim.includes('swap_flash')) {
             const swapPeriod = currentAnim.includes('swap_flash_fast') ? 5000 : 7000;
             const cyclePos = protocolTime % swapPeriod;
@@ -1097,7 +1091,6 @@ function animate(time) {
             buildTargets();
         }
 
-        // ⚡ 去抑制機制二：純粹全開/全關交替 (flicker)
         if (currentAnim.includes('flicker')) {
             const isLeftTurn = Math.floor(protocolTime / 480) % 2 === 0;
             if (targetLeft) targetLeft.visible = isLeftTurn;
@@ -1107,7 +1100,6 @@ function animate(time) {
             if (targetRight) targetRight.visible = true;
         }
 
-        // 🌿 第 7 階「90 秒全向同心漣漪拮抗肌同步放鬆 (antagonist_relax)」
         if (currentAnim.includes('antagonist_relax')) {
             antagonistRippleGroup.visible = true;
             taskActive = false; cueGroupLeft.visible = false; cueGroupRight.visible = false;
@@ -1204,7 +1196,6 @@ function animate(time) {
         currentRoamX = 0; currentRoamY = 0;
     }
 
-    // ⚡ Saccade 定點跳視引擎：配備「下一落點微光預告準星」
     if (isSaccadeActive) {
         saccadeGhostLeft.visible = true;
         saccadeGhostRight.visible = true;
@@ -1214,11 +1205,9 @@ function animate(time) {
 
         if (saccadeTimer > sacInterval) { 
             saccadeTimer = 0; 
-            // 將視標正式跳往預告準星之位置
             currentSaccadeX = nextSaccadeX;
             currentSaccadeY = nextSaccadeY;
 
-            // 計算下一個預告落點座標
             if (isWarmupSaccade) {
                 saccadeStepIndex = (saccadeStepIndex + 1) % SACCADE_WARMUP_POINTS.length;
                 nextSaccadeX = SACCADE_WARMUP_POINTS[saccadeStepIndex].x;
@@ -1252,7 +1241,6 @@ function animate(time) {
             }
         }
         
-        // 戰術雷達網 (golden_spiral/radar_hud)、陀螺儀 (gyro_cross)、十字靶與文字保持正交軸線絕對端正不自轉，讓米字與十字刻度精準咬合！
         if (!isRotating || curShape === 'text' || curShape === 'dichoptic_cross' || curShape === 'gyro_cross' || curShape === 'golden_spiral' || curShape === 'radar_hud' || curShape === 'depth_tunnel') {
             targetLeft.rotation.z = 0;
             targetRight.rotation.z = 0;
