@@ -1,9 +1,8 @@
-// app.js - AXP Vision 動態視覺優化系統 (Clinical Pro Edition - Internal Build V1.0)
+// app.js - AXP Vision 動態視覺優化系統 (Clinical Pro Edition - V1.0 智能臨床能力診斷加強版)
 // 核心臨床工程突破：
-// 1. 獨立資料庫分流：所有臨床訓練紀錄 100% 獨立上傳至 Supabase 之 pro_training_sessions 資料表，與公開下放版徹底物理隔離
+// 1. Supabase 臨床能力直觀攤平引擎：自動結算「能力總評 (ability_summary)」「雙眼融像率 (fusion_rate)」「抑制診斷 (suppression_status)」「最高內聚/開散稜鏡 (max_bo_prism / max_bi_prism)」與「平均反應秒數 (avg_reaction_sec)」，打開資料庫一秒看穿個案強弱項！
 // 2. 徹底解放 Stage 1-3 眼外肌暖身運動：讓 KeyU (大圓周與8字追視 Pursuit) 與 KeyO (定點跳視 Saccade) 從第 1 階第一秒就清晰有感
-// 3. 獨家「Saccade 跳視落點預告準星 (Ghost Reticle)」：於跳視模式下自動在下一落點預先顯示微光瞄準圈，訓練「餘光定位 -> 快速跳視 -> 中心窩合像」完整神經閉環
-// 4. 尺寸與線條粗細正向生理耦合：大圖配厚線 (初階喚醒舒適圈) -> 小圖配細銳線 (高階中心窩精雕)，徹底杜絕圖小線粗悲劇
+// 3. 獨家「Saccade 跳視落點預告準星 (Ghost Reticle)」与「尺寸線寬正向生理耦合器」
 
 import { AIM_MATRIX, PROTOCOL_NAMES } from './matrix.js';
 import { createTarget } from './shapes.js';
@@ -14,7 +13,7 @@ const supabaseUrl = 'https://wvholwcyrldixlsgoege.supabase.co';
 const supabaseKey = 'sb_publishable_BozJ84tPQF-jBHGKtXKqgw_ELodM54e';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// === 1. 腹側迷走神經輕鬆配色登入畫面 (晨曦冰川霧藍 × 溫潤白玉卡片) ===
+// === 1. 腹側迷走神經輕鬆配色登入畫面 ===
 let currentPatientCode = 'FV-8888';
 const loginOverlay = document.createElement('div');
 loginOverlay.style.cssText = "position:fixed; top:0; left:0; width:100vw; height:100vh; background:linear-gradient(135deg, #ebf3f9 0%, #f8fafc 50%, #f3efe6 100%); z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; font-family:'Noto Sans TC', -apple-system, sans-serif; transition: opacity 0.35s ease;";
@@ -95,13 +94,11 @@ const btnTestMode = document.getElementById('btn-test-mode');
 const breathIndicator = document.getElementById('breath-indicator');
 const breathText = document.getElementById('breath-text');
 
-// 臨床狀態導引膠囊
 const siloPrompt = document.createElement('div');
 siloPrompt.id = 'silo-prompt';
 siloPrompt.style.cssText = "position:absolute; bottom:66px; left:50%; transform:translateX(-50%); font-size:15px; font-weight:800; letter-spacing:1.2px; background:rgba(15, 23, 42, 0.90); backdrop-filter:blur(8px); padding:10px 24px; border-radius:10px; border:1.5px solid #D4AF37; color:#f8fafc; z-index:100; display:none; text-align:center; pointer-events:none; box-shadow:0 8px 25px rgba(0,0,0,0.45);";
 document.getElementById('arena').appendChild(siloPrompt);
 
-// ⏳ 切換下一動作前「最後 5 秒倒數計時膠囊」
 const stageCountdownBadge = document.createElement('div');
 stageCountdownBadge.id = 'stage-countdown-badge';
 stageCountdownBadge.style.cssText = "position:absolute; top:24px; right:28px; font-size:15.5px; font-weight:900; letter-spacing:1px; background:rgba(26, 54, 93, 0.92); backdrop-filter:blur(10px); padding:12px 22px; border-radius:12px; border:2px solid #D4AF37; color:#D4AF37; z-index:110; display:none; text-align:center; pointer-events:none; box-shadow:0 10px 30px rgba(0,0,0,0.5); font-family:'Noto Sans TC', monospace;";
@@ -117,7 +114,6 @@ let isRotating = true, isFilled = true;
 let activeProtocol = null, protocolStage = 0, protocolTime = 0, totalTimerSec = 0, lastTime = 0, phase = 0;
 let currentSaccadeX = 0, currentSaccadeY = 0, saccadeTimer = 0, currentRoamX = 0, currentRoamY = 0;
 
-// Saccade 跳視「下一個目標落點預告座標」與「8方位暖身序列索引」
 let nextSaccadeX = 180, nextSaccadeY = 0, saccadeStepIndex = 0;
 const SACCADE_WARMUP_POINTS = [
     { x: -200, y: 0 }, { x: 200, y: 0 },
@@ -127,7 +123,6 @@ const SACCADE_WARMUP_POINTS = [
 ];
 
 let dichopticSwapState = false; 
-
 let currentAxis = 'horizontal';
 let currentMode = 'crossover';
 
@@ -137,6 +132,10 @@ let isTestModeActive = true;
 let taskActive = false;
 let taskDirection = '', taskEye = 'both', taskSpawnTime = 0, timeSinceLastTask = 0, nextTaskInterval = 2800, statusTimeout = null;
 let taskInitialPrism = "";
+
+// 追蹤本場訓練最高達成之 BO 與 BI 稜鏡量
+let sessionPeakBO = 0;
+let sessionPeakBI = 0;
 
 let consecutiveHits = 0;
 let consecutiveMisses = 0;
@@ -158,7 +157,7 @@ if (btnTestMode) {
 }
 
 // ==========================================
-// 核心圖學：Layer Masking 雙通道渲染引擎 (OEPF 臨床濾鏡光譜校準版)
+// 核心圖學：Layer Masking 雙通道渲染引擎
 // ==========================================
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#000000');
@@ -218,7 +217,6 @@ const postCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 const postQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), postMaterial);
 postScene.add(postQuad);
 
-// 🌿 第 7 階專屬：360 度全向同心水波漣漪群組
 const antagonistRippleGroup = new THREE.Group();
 const rippleRings = [];
 for (let r = 0; r < 4; r++) {
@@ -232,7 +230,6 @@ for (let r = 0; r < 4; r++) {
 antagonistRippleGroup.visible = false;
 scene.add(antagonistRippleGroup);
 
-// 🎯 獨家黑科技：Saccade 定點跳視「下一個落點預告準星 (Ghost Reticle)」
 function createSaccadeGhostReticle(layerNum) {
     const gGroup = new THREE.Group();
     const gMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, depthWrite: false });
@@ -254,7 +251,6 @@ const saccadeGhostLeft = createSaccadeGhostReticle(1);
 const saccadeGhostRight = createSaccadeGhostReticle(2);
 scene.add(saccadeGhostLeft, saccadeGhostRight);
 
-// 紅藍分層深空星點
 const starCanvas = document.createElement('canvas');
 starCanvas.width = 32; starCanvas.height = 32;
 const starCtx = starCanvas.getContext('2d');
@@ -290,7 +286,6 @@ let distractorGroupLeft = new THREE.Group();
 let distractorGroupRight = new THREE.Group();
 let distractorData = []; 
 
-// 方向鍵測驗閃爍提示點
 const cueGroupLeft = new THREE.Group();
 const cueGroupRight = new THREE.Group();
 const cueOutlineGeo = new THREE.CircleGeometry(1.4, 32);
@@ -344,7 +339,6 @@ function getScreenSizeCompensationFactor() {
     return baseMbp16Cm / physicalWidthCm;
 }
 
-// 🔬 OEPF 臨床紅藍濾鏡光譜校準引擎
 function updateOpticsFromUI() {
     const rVal = redSlider ? parseInt(redSlider.value) : 85;
     const gVal = greenSlider ? parseInt(greenSlider.value) : 85;
@@ -406,7 +400,6 @@ function clearTargets() {
     distractorData = [];
 }
 
-// 🔬 尺寸與線條粗細正向生理耦合器 (大圖配厚線 -> 小圖配細銳線，徹底杜絕圖小線粗悲劇)
 function getPhysiologicalCoupledThickness(sizeVal, rawThickVal) {
     const sizeRatio = Math.max(0.52, Math.min(1.22, Math.pow(sizeVal / 360.0, 0.85)));
     return Math.max(3.0, Math.min(10.0, rawThickVal * sizeRatio));
@@ -598,6 +591,12 @@ function updatePositions(phaseVal, currentAnim = '') {
         let hPrismDir = currentSepX >= 0 ? "BO" : "BI";
         const verticalPrism = (Math.abs(currentSepY) * pixelToCm) / viewDistM;
         
+        // 紀錄練習期間出現之峰值 BO 與 BI 稜鏡量
+        if (isRunning) {
+            if (currentSepX >= 0 && horizontalPrism > sessionPeakBO) sessionPeakBO = horizontalPrism;
+            if (currentSepX < 0 && horizontalPrism > sessionPeakBI) sessionPeakBI = horizontalPrism;
+        }
+
         if (prismValHud) {
             let hudText = `${horizontalPrism.toFixed(1)} Δ (${hPrismDir})`;
             if (verticalPrism >= 0.15) {
@@ -746,9 +745,96 @@ function endAIRescue() {
     }
 }
 
+// 🔬 智能臨床能力分析器：將作答明細直接轉化為「哪項能力行、哪項不行」之直觀指標
+function analyzeClinicalCapabilities(logs) {
+    let fusionHits = 0, boFail = 0, biFail = 0, vertFail = 0;
+    let leftSupp = 0, rightSupp = 0, antiSuppHits = 0;
+    let maxBOHit = 0, maxBIHit = 0;
+    let rtSum = 0, rtCount = 0;
+
+    logs.forEach(log => {
+        const pStr = log.response_prism || "";
+        const numMatch = pStr.match(/([\d.]+)\s*Δ\s*\((BO|BI)\)/);
+        const pVal = numMatch ? parseFloat(numMatch[1]) : 0;
+        const pDir = numMatch ? numMatch[2] : "";
+
+        const rtVal = parseFloat(log.reaction_time);
+        if (rtVal > 0) { rtSum += rtVal; rtCount++; }
+
+        if (log.status.includes('FUSION')) {
+            fusionHits++;
+            if (pDir === 'BO' && pVal > maxBOHit) maxBOHit = pVal;
+            if (pDir === 'BI' && pVal > maxBIHit) maxBIHit = pVal;
+        } else if (log.status.includes('ANTI_SUPP')) {
+            antiSuppHits++;
+            if (pDir === 'BO' && pVal > maxBOHit) maxBOHit = pVal;
+            if (pDir === 'BI' && pVal > maxBIHit) maxBIHit = pVal;
+        } else if (log.status.includes('SUPP_LEFT')) {
+            leftSupp++;
+        } else if (log.status.includes('SUPP_RIGHT')) {
+            rightSupp++;
+        } else if (log.status.includes('BO_FAIL')) {
+            boFail++;
+        } else if (log.status.includes('BI_FAIL')) {
+            biFail++;
+        } else if (log.status.includes('VERT_FAIL')) {
+            vertFail++;
+        }
+    });
+
+    const totalTasks = logs.length;
+    const totalSuccess = fusionHits + antiSuppHits;
+    const ratePct = totalTasks > 0 ? Math.round((totalSuccess / totalTasks) * 100) : 0;
+    const fusionRateStr = totalTasks > 0 ? `${ratePct}% (${totalSuccess}/${totalTasks}題)` : "未作答方向鍵";
+
+    let suppStr = "🟢 雙眼暢通無抑制";
+    if (leftSupp > 0 && rightSupp > 0) suppStr = `🟡 交替抑制 (左${leftSupp}次/右${rightSupp}次)`;
+    else if (leftSupp > 0) suppStr = `🟡 左眼抑制偏高 (${leftSupp}次未察覺)`;
+    else if (rightSupp > 0) suppStr = `🟡 右眼抑制偏高 (${rightSupp}次未察覺)`;
+    else if (totalTasks === 0) suppStr = "⚪ 未觸發抑制測驗";
+
+    const finalMaxBO = maxBOHit > 0 ? maxBOHit : sessionPeakBO;
+    const finalMaxBI = maxBIHit > 0 ? maxBIHit : sessionPeakBI;
+    const maxBOStr = `${finalMaxBO.toFixed(1)} Δ BO` + (boFail > 0 ? ` (破開${boFail}次)` : " (穩定)");
+    const maxBIStr = `${finalMaxBI.toFixed(1)} Δ BI` + (biFail > 0 ? ` (破開${biFail}次)` : " (穩定)");
+    const avgRt = rtCount > 0 ? parseFloat((rtSum / rtCount).toFixed(2)) : 0;
+
+    // 組合一句話看懂「哪些能力行、哪些不行」之總評
+    let summaryParts = [];
+    if (totalTasks === 0) {
+        summaryParts.push(`純視覺跟隨練習 (最高達 ${finalMaxBO.toFixed(1)}Δ BO / ${finalMaxBI.toFixed(1)}Δ BI)`);
+    } else {
+        if (ratePct >= 80) summaryParts.push(`✅ 雙眼融像極佳(${ratePct}%)`);
+        else if (ratePct >= 55) summaryParts.push(`🟡 融像尚可(${ratePct}%)`);
+        else summaryParts.push(`❌ 融像不穩(${ratePct}%)`);
+
+        if (boFail === 0 && finalMaxBO >= 8) summaryParts.push(`✅ BO內聚可達${finalMaxBO.toFixed(1)}Δ`);
+        else if (boFail > 0) summaryParts.push(`❌ BO內聚不足(失誤${boFail}次)`);
+
+        if (biFail === 0 && finalMaxBI >= 2) summaryParts.push(`✅ BI開散可達${finalMaxBI.toFixed(1)}Δ`);
+        else if (biFail > 0) summaryParts.push(`❌ BI開散不足(失誤${biFail}次)`);
+
+        if (leftSupp > 0) summaryParts.push(`⚠️ 左眼抑制(${leftSupp}次)`);
+        if (rightSupp > 0) summaryParts.push(`⚠️ 右眼抑制(${rightSupp}次)`);
+        if (vertFail > 0) summaryParts.push(`⚠️ 垂直失準(${vertFail}次)`);
+    }
+
+    return {
+        ability_summary: summaryParts.join(' ｜ '),
+        fusion_rate: fusionRateStr,
+        suppression_status: suppStr,
+        max_bo_prism: maxBOStr,
+        max_bi_prism: maxBIStr,
+        avg_reaction_sec: avgRt,
+        max_break_numeric: parseFloat(finalMaxBO.toFixed(1))
+    };
+}
+
 function showClinicalReport(logs, totalTime, protocolName) {
     let fusionCount = 0, suppCount = 0, antiSuppCount = 0, boFail = 0, biFail = 0, vertFail = 0;
     let tableRowsHTML = "";
+    const diag = analyzeClinicalCapabilities(logs);
+
     logs.forEach(log => {
         if(log.status.includes('FUSION')) fusionCount++;
         if(log.status.includes('SUPP_') && !log.status.includes('ANTI')) suppCount++;
@@ -763,23 +849,28 @@ function showClinicalReport(logs, totalTime, protocolName) {
     const reportOverlay = document.createElement('div');
     reportOverlay.style.cssText = "position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15, 23, 42, 0.82); backdrop-filter:blur(6px); z-index:10000; display:flex; justify-content:center; align-items:center; font-family:'Noto Sans TC', sans-serif;";
     reportOverlay.innerHTML = `
-        <div style="background:#ffffff; width: 660px; max-width:94vw; max-height: 86vh; border-radius:16px; box-shadow: 0 25px 50px rgba(0,0,0,0.4); display:flex; flex-direction:column; overflow:hidden; border-top: 5px solid #2980b9;">
+        <div style="background:#ffffff; width: 680px; max-width:94vw; max-height: 88vh; border-radius:16px; box-shadow: 0 25px 50px rgba(0,0,0,0.4); display:flex; flex-direction:column; overflow:hidden; border-top: 5px solid #2980b9;">
             <div style="background:#1A365D; color:white; padding: 20px; text-align:center;">
                 <h2 style="margin:0; font-size:21px; font-weight:900; letter-spacing:1px;">AXP Vision 動態視覺空間協同評估報告</h2>
                 <p style="margin:5px 0 0 0; color:#D4AF37; font-size:13.5px; font-weight:700;">專屬訓練代號: ${currentPatientCode} ｜ 綜合積分: ${sessionScore}</p>
             </div>
             <div style="padding: 20px; overflow-y:auto; flex-grow:1; color:#334155;">
+                <div style="background:#f0f9ff; border:1.5px solid #bae6fd; border-left:5px solid #0284c7; padding:12px 16px; border-radius:8px; margin-bottom:16px;">
+                    <div style="font-size:12px; font-weight:800; color:#0369a1; margin-bottom:4px;">🔬 AI 臨床視覺能力診斷總評：</div>
+                    <div style="font-size:14px; font-weight:900; color:#0f172a; line-height:1.5;">${diag.ability_summary}</div>
+                </div>
                 <div style="display:flex; justify-content:space-between; margin-bottom: 18px; background:#f8fafc; padding:14px 18px; border-radius:8px; border:1px solid #cbd5e1;">
                     <div><p style="margin:0 0 4px 0; font-size:12px; color:#64748b; font-weight:bold;">練習總時長</p><p style="margin:0; font-size:18px; font-weight:900; color:#1A365D;">${Math.floor(totalTime / 60)}分 ${totalTime % 60}秒</p></div>
+                    <div><p style="margin:0 0 4px 0; font-size:12px; color:#64748b; font-weight:bold;">合像成功率 / 平均反應</p><p style="margin:0; font-size:15px; font-weight:900; color:#059669;">${diag.fusion_rate} (${diag.avg_reaction_sec}s)</p></div>
                     <div style="text-align:right;"><p style="margin:0 0 4px 0; font-size:12px; color:#64748b; font-weight:bold;">主要執行模組</p><p style="margin:0; font-size:14px; font-weight:800; color:#1A365D;">${protocolName.split('(')[0]}</p></div>
                 </div>
                 <h3 style="font-size:15px; margin-bottom:10px; color:#1A365D; border-bottom:1.5px solid #e2e8f0; padding-bottom:6px; font-weight:900;">📊 雙眼舒適圈與協同表現統計</h3>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:20px;">
-                    <div style="background:#ecfdf5; padding:10px 14px; border-radius:8px; border:1px solid #a7f3d0;"><span style="font-size:12px; color:#059669; font-weight:bold;">🟢 雙眼精準合像次數</span><br><span style="font-size:20px; font-weight:900; color:#065f46;">${fusionCount}</span></div>
+                    <div style="background:#ecfdf5; padding:10px 14px; border-radius:8px; border:1px solid #a7f3d0;"><span style="font-size:12px; color:#059669; font-weight:bold;">🟢 雙眼精準合像次數</span><br><span style="font-size:20px; font-weight:900; color:#065f46;">${fusionCount} <small style="font-size:12px;">(最高 ${diag.max_bo_prism})</small></span></div>
                     <div style="background:#ecfdf5; padding:10px 14px; border-radius:8px; border:1px solid #a7f3d0;"><span style="font-size:12px; color:#059669; font-weight:bold;">🟢 單側去抑制喚醒成功</span><br><span style="font-size:20px; font-weight:900; color:#065f46;">${antiSuppCount}</span></div>
-                    <div style="background:#fef2f2; padding:10px 14px; border-radius:8px; border:1px solid #fecaca;"><span style="font-size:12px; color:#e11d48; font-weight:bold;">🔴 內聚負荷臨界 (BO)</span><br><span style="font-size:20px; font-weight:900; color:#9f1239;">${boFail}</span></div>
-                    <div style="background:#fef2f2; padding:10px 14px; border-radius:8px; border:1px solid #fecaca;"><span style="font-size:12px; color:#e11d48; font-weight:bold;">🔴 外展負荷臨界 (BI)</span><br><span style="font-size:20px; font-weight:900; color:#9f1239;">${biFail}</span></div>
-                    <div style="background:#fffbeb; padding:10px 14px; border-radius:8px; border:1px solid #fde68a;"><span style="font-size:12px; color:#d97706; font-weight:bold;">🟡 間歇性單眼抑制</span><br><span style="font-size:20px; font-weight:900; color:#92400e;">${suppCount}</span></div>
+                    <div style="background:#fef2f2; padding:10px 14px; border-radius:8px; border:1px solid #fecaca;"><span style="font-size:12px; color:#e11d48; font-weight:bold;">🔴 內聚負荷臨界 (BO 失誤)</span><br><span style="font-size:20px; font-weight:900; color:#9f1239;">${boFail}</span></div>
+                    <div style="background:#fef2f2; padding:10px 14px; border-radius:8px; border:1px solid #fecaca;"><span style="font-size:12px; color:#e11d48; font-weight:bold;">🔴 外展負荷臨界 (BI 失誤)</span><br><span style="font-size:20px; font-weight:900; color:#9f1239;">${biFail}</span></div>
+                    <div style="background:#fffbeb; padding:10px 14px; border-radius:8px; border:1px solid #fde68a;"><span style="font-size:12px; color:#d97706; font-weight:bold;">🟡 間歇性單眼抑制狀態</span><br><span style="font-size:15px; font-weight:900; color:#92400e;">${diag.suppression_status}</span></div>
                     <div style="background:#fef2f2; padding:10px 14px; border-radius:8px; border:1px solid #fecaca;"><span style="font-size:12px; color:#e11d48; font-weight:bold;">🔴 垂直空間失準</span><br><span style="font-size:20px; font-weight:900; color:#9f1239;">${vertFail}</span></div>
                 </div>
                 <h3 style="font-size:15px; margin-bottom:10px; color:#1A365D; border-bottom:1.5px solid #e2e8f0; padding-bottom:6px; font-weight:900;">📋 毫秒級反應明細</h3>
@@ -797,13 +888,15 @@ function showClinicalReport(logs, totalTime, protocolName) {
     });
 }
 
-// 🔬 已將資料上傳目標獨立鎖定為 pro_training_sessions 資料表！
+// 🔬 直接將 6 大中文臨床能力指標寫入 Supabase 獨立欄位，一秒看穿強弱項！
 async function uploadToSupabase() {
     const finalTime = totalTimerSec; 
-    const finalProtocol = activeProtocol ? PROTOCOL_NAMES[activeProtocol] : 'MANUAL_MODE';
+    const finalProtocol = activeProtocol ? PROTOCOL_NAMES[activeProtocol] : '手動自由調控模式';
+    const diag = analyzeClinicalCapabilities(sessionLogs);
     
     const payloadData = {
         patient_id: currentPatientCode,
+        capability_diagnosis: diag,
         environmental_setup: {
             prism_base: document.getElementById('prism-slider')?.value || 0,
             anaglyph_balance: document.getElementById('balance-slider')?.value || 50,
@@ -820,13 +913,29 @@ async function uploadToSupabase() {
     if(statusText) { statusText.innerText = "SYNCING CLOUD REPORT..."; statusText.style.color = "#38bdf8"; }
     
     try {
-        if (sessionLogs.length > 0) {
-            await supabase.from('pro_training_sessions').insert([{ 
+        if (finalTime > 0 || sessionLogs.length > 0) {
+            const { error } = await supabase.from('pro_training_sessions').insert([{ 
+                patient_code: currentPatientCode,
                 duration_sec: finalTime, 
-                protocol_name: finalProtocol, 
-                raw_data: payloadData,
-                patient_code: currentPatientCode  
+                protocol_name: finalProtocol,
+                max_break_sep: diag.max_break_numeric,
+                ability_summary: diag.ability_summary,
+                fusion_rate: diag.fusion_rate,
+                suppression_status: diag.suppression_status,
+                max_bo_prism: diag.max_bo_prism,
+                max_bi_prism: diag.max_bi_prism,
+                avg_reaction_sec: diag.avg_reaction_sec,
+                raw_data: payloadData
             }]);
+            if (error) {
+                await supabase.from('pro_training_sessions').insert([{ 
+                    patient_code: currentPatientCode,
+                    duration_sec: finalTime, 
+                    protocol_name: `${diag.ability_summary} | ${finalProtocol}`,
+                    max_break_sep: diag.max_break_numeric,
+                    raw_data: payloadData
+                }]);
+            }
         }
         if(statusText) { statusText.innerText = "REPORT GENERATED"; statusText.style.color = "#34d399"; }
         showClinicalReport(payloadData.clinical_logs, finalTime, finalProtocol);
@@ -1027,9 +1136,6 @@ function toggleFullScreen() {
 }
 if(fullscreenBtn) fullscreenBtn.addEventListener('click', toggleFullScreen);
 
-// ==========================================
-// 🚀 動態動畫與嚴格 60s/90s 階段計時迴圈
-// ==========================================
 function animate(time) {
     if (!isRunning) return;
     if (!lastTime) lastTime = time;
@@ -1281,6 +1387,7 @@ function executeReset() {
     if(startBtn) { startBtn.innerText = "▶ 啟動訓練 [ Space ]"; startBtn.classList.remove('active'); }
     if(statusText) { statusText.innerText = "IDLE (待命)"; statusText.style.color = '#f8fafc'; }
     totalTimerSec = 0; sessionScore = 0; protocolTime = 0;
+    sessionPeakBO = 0; sessionPeakBI = 0;
     if(timerDisplay) timerDisplay.innerText = "00:00"; 
     if(hudScoreVal) hudScoreVal.innerText = "0";
     
