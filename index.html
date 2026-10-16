@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
+    <!-- AXP Vision 動態視覺優化系統 (Clinical Pro Edition - Internal Build V1.0) -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AXP Neuro-Optic Engine v30.0 | 凡特錫視覺實驗室</title>
+    <title>AXP Vision 動態視覺優化系統 | 凡特錫視覺實驗室</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
@@ -25,7 +26,7 @@
                     <span>STEREO: <strong id="hud-stereo-val">0.02</strong></span>
                     <span>SCORE: <strong id="hud-score-val" style="color:#D4AF37;">0</strong></span>
                 </div>
-                <div id="dynamic-mode-tag">AXP NEURO-OPTIC PRO v30.0｜OEPF 臨床光譜校準版</div>
+                <div id="dynamic-mode-tag">AXP VISION 動態視覺優化系統｜OEPF 臨床光譜校準版</div>
             </div>
 
             <!-- 左下角：多重迷走神經 10 秒呼吸律動導引燈 -->
@@ -37,11 +38,11 @@
             <div id="webgl-container"></div>
         </div>
 
-        <!-- 右側：瑞士醫療儀器級控制面板 -->
+        <!-- 右側：瑞士醫療儀器級控制面板 (無版本號純淨商業版) -->
         <div class="control-panel">
             <div class="panel-header">
                 <h2>FANTASTIC VISION LAB</h2>
-                <p>AXP NEURO-OPTIC PRO v30.0</p>
+                <p>AXP VISION 動態視覺優化系統</p>
             </div>
 
             <!-- 1. 主控開關與雲端報告結算 -->
@@ -57,7 +58,7 @@
             <!-- 2. 五大零重複專武化模組按鈕 -->
             <div class="control-section">
                 <div class="section-title-row">
-                    <h3>🎯 五大神經視光專武模組</h3>
+                    <h3>🎯 五大視覺協同專武模組</h3>
                     <label class="ai-switch-label" title="快捷鍵: Z">
                         <input type="checkbox" id="ai-toggle" checked>
                         <span>自動進階 [Z]</span>
@@ -65,9 +66,9 @@
                 </div>
                 <div class="protocol-grid">
                     <button class="proto-btn" data-proto="KeyY"><strong>Y</strong> 陀螺儀去抑制與瞬換</button>
-                    <button class="proto-btn" data-proto="KeyU"><strong>U</strong> 黃金螺旋周邊與追視</button>
+                    <button class="proto-btn" data-proto="KeyU"><strong>U</strong> 戰術雷達追視與周邊</button>
                     <button class="proto-btn" data-proto="KeyI"><strong>I</strong> 蟲洞隧道與胖球 SILO</button>
-                    <button class="proto-btn" data-proto="KeyO"><strong>O</strong> 垂直雙向與跳視微調</button>
+                    <button class="proto-btn" data-proto="KeyO"><strong>O</strong> 定點跳視與垂直微調</button>
                     <button class="proto-btn" data-proto="KeyP"><strong>P</strong> 高頻字體調節解綁</button>
                     <button class="proto-btn test-mode-btn test-on" id="btn-test-mode"><strong>0</strong> 互動測驗: 開 (按方向鍵)</button>
                 </div>
@@ -107,13 +108,13 @@
 
             <!-- 4. 黑科技視標幾何與物理稜鏡調控 -->
             <div class="control-section">
-                <h3>🌀 黑科技視標與物理稜鏡調控</h3>
+                <h3>🌀 臨床視標與物理稜鏡調控</h3>
                 <div class="input-row">
                     <label>視標結構</label>
                     <select id="shape-select">
-                        <option value="gyro_cross" selected>🧭 航太三軸陀螺儀準星鎖 (黑科技去抑制)</option>
-                        <option value="depth_tunnel">🌀 10層立體深度蟲洞隧道 (黑科技 SILO)</option>
-                        <option value="golden_spiral">🌌 費馬黃金螺旋光流陣 (黑科技周邊/放鬆)</option>
+                        <option value="gyro_cross" selected>🧭 航太三軸陀螺儀準星鎖 (去抑制/垂直)</option>
+                        <option value="depth_tunnel">🌀 10層立體深度蟲洞隧道 (進階 SILO)</option>
+                        <option value="golden_spiral">🎯 戰術雷達廣角鎖定網 (追視/周邊)</option>
                         <option value="dichoptic_cross">➕ 雙眼互補圓圈與十字靶 (經典對位)</option>
                         <option value="dichoptic_lock">💠 雙眼分視八角外框與晶核 (中心鎖)</option>
                         <option value="sphere5">🌐 3D 五層立體網格胖圓球 (SILO)</option>
@@ -133,8 +134,8 @@
                     <input type="range" id="prism-slider" min="-7.5" max="35" step="0.5" value="0">
                 </div>
                 <div class="slider-group">
-                    <div class="slider-header"><span>視標尺寸 [S / W]</span><strong id="size-label">340px</strong></div>
-                    <input type="range" id="size-slider" min="150" max="550" step="10" value="340">
+                    <div class="slider-header"><span>視標尺寸 [S / W]</span><strong id="size-label">360px</strong></div>
+                    <input type="range" id="size-slider" min="150" max="550" step="10" value="360">
                 </div>
                 <div class="slider-group">
                     <div class="slider-header"><span>運動速度 [< / >]</span><strong id="speed-label">14</strong></div>
@@ -145,8 +146,8 @@
                     <input type="range" id="stereo-slider" min="-0.15" max="0.15" step="0.01" value="0.02">
                 </div>
                 <div class="slider-group">
-                    <div class="slider-header"><span>線條與光環粗細 [A / D]</span><strong id="thick-label">8.5</strong></div>
-                    <input type="range" id="thick-slider" min="3" max="10" step="0.5" value="8.5">
+                    <div class="slider-header"><span>線條與光環粗細 [A / D]</span><strong id="thick-label">8.0</strong></div>
+                    <input type="range" id="thick-slider" min="3" max="10" step="0.5" value="8.0">
                 </div>
 
                 <div class="checkbox-row">
